@@ -1,0 +1,44 @@
+﻿@page "/login"
+@inject IToastService Toast
+@inject NavigationManager NavigationManager
+@inject AuthService Auth
+
+<h3 class="m-3">Login</h3>
+Please log in below or <NavLink href="register">register</NavLink> for a new account.
+
+<EditForm Model="@_user" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <div class="form-group">
+        <label for="nickname">Nickname</label>
+        <InputText id="nickname" @bind-Value="_user.Nickname" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <InputText id="password" @bind-Value="_user.Password" type="password" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+    <ValidationSummary />
+</EditForm>
+
+<AuthorizeView>
+    <Authorized>
+        <p>Authorized</p>
+    </Authorized>
+    <NotAuthorized>
+        <p>Please log in</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Models.User.UserLoginRequest _user = new Models.User.UserLoginRequest();
+
+    private async Task HandleLogin()
+    {
+        if (await Auth.LoginUserAsync(_user)) {
+            Toast.ShowSuccess("Successfully logged in.");
+            NavigationManager.NavigateTo("/", true);
+        } else {
+            Toast.ShowError("Incorrect nickname or password.");
+        }
+    }
+}

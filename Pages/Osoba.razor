@@ -1,0 +1,32 @@
+﻿@page "/osoba"
+@attribute [Authorize]
+
+@using PDS.Cestovatelia.Data
+@inject OracleDbContext DbContext
+<h3 class="m-3">Table p_osoba</h3>
+
+@if (osoby != null) {
+    <table class="table table-striped">
+        <tbody>
+            @foreach (var osoba in osoby) {
+                <tr>
+                    <td>@osoba.rod_cislo</td>
+                    <td>@osoba.meno</td>
+                    <td>@osoba.priezvisko</td>
+                    <td>@osoba.PSC</td>
+                    <td>@osoba.ulica</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private IList<PDS.Cestovatelia.Models.Osoba> osoby;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        osoby = await DbContext.GetAllAsync();
+    }
+}

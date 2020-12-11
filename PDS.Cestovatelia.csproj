@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <UserSecretsId>3687ffa1-ecce-4caf-8202-db53431a3e04</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazored.SessionStorage" Version="1.0.12" />
+    <PackageReference Include="Blazored.Toast" Version="3.1.2" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.100" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+  </PropertyGroup>
+
+</Project>

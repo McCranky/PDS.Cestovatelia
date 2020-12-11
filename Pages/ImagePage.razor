@@ -1,0 +1,58 @@
+﻿@page "/image"
+
+@using PDS.Cestovatelia.Data
+@inject OracleDbContext DbContext
+
+
+<h3 class="m-3">ImagePage</h3>
+
+<form class="form-inline" @onsubmit="HandleSubmit">
+    <label class="sr-only" for="imgTitle">Title</label>
+    <input type="text" class="form-control mb-2 mr-sm-2" id="imgTitle" placeholder="Title" @bind-value="@_title">
+
+    <label class="sr-only" for="imgUrl">Username</label>
+    <InputFile OnChange="HandleFileInput" id="imgUrl"/>
+    <img class="rounded m-3" src="@_imgUrl" />
+
+    <button type="submit" class="btn btn-primary mb-2">Submit</button>
+</form>
+
+<hr/>
+
+<form class="form-inline" @onsubmit="HandleSearch">
+    <label class="sr-only" for="imgTitle">Title</label>
+    <input type="text" class="form-control mb-2 mr-sm-2" id="imgTitle" placeholder="Title" @bind-value="@_title">
+
+    <button type="submit" class="btn btn-primary mb-2">Search</button>
+</form>
+<img class="rounded m-3" src="@_searchImgUrl" />
+
+@code {
+    private string _title = "";
+    private byte[] _buffer;
+
+    private string _imgUrl;
+    private string _searchImgUrl;
+
+    private async Task HandleFileInput(InputFileChangeEventArgs args)
+    {
+        var format = "image/png";
+        var resizedImage = await args.File.RequestImageFileAsync(format, 100, 100);
+
+        var buffer = new byte[resizedImage.Size];
+        await resizedImage.OpenReadStream().ReadAsync(buffer);
+        _buffer = buffer;
+        _imgUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task HandleSearch()
+    {
+        var buff = await DbContext.SelectImageAsync(_title);
+        _searchImgUrl = $"data:{"image/png"};base64,{Convert.ToBase64String(buff)}";
+    }
+
+    private async Task HandleSubmit()
+    {
+        await DbContext.InsertImageAsync(new Models.ImageModel { Title = _title, Image = _buffer });
+    }
+}
