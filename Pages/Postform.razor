@@ -1,0 +1,62 @@
+﻿@page "/postform"
+@attribute [Authorize]
+
+@inject IToastService Toast
+@inject NavigationManager NavigationManager
+@inject AuthService Auth
+@inject Data.OracleDbContext Context
+
+<div class="card border-light w-50 align-self-center mt-5">
+    <img class="card-img-top" src="@_imgUrl" width="18rem">
+    <div class="card-body">
+        <h4 class="card-title">Create Post</h4>
+        <EditForm Model="@_post" OnValidSubmit="HandlePost">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <label class="sr-only" for="imgUrl">Picture</label>
+            <InputFile OnChange="HandleFileInput" id="imgUrl" />
+            @*<img class="rounded m-3" src="@_post." />*@
+
+            <div class="form-group mt-3">
+                <label for="nickname">Description</label>
+                <InputText id="nickname" @bind-Value="_post.Description" class="form-control" />
+            </div>
+
+            <button type="submit" class="btn btn-info">Submit</button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private PostModel _post = new PostModel();
+    private string _imgUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var userInfo = await Auth.GetCurrentUser();
+        _post.Nickname = userInfo.Nickname;
+        _post.UserId = userInfo.Id;
+    }
+
+    private async Task HandleFileInput(InputFileChangeEventArgs args)
+    {
+        var format = "image/png";
+        var resizedImage = await args.File.RequestImageFileAsync(format, 400, 400);
+
+        var buffer = new byte[resizedImage.Size];
+        await resizedImage.OpenReadStream().ReadAsync(buffer);
+        _post.Picture = buffer;
+        _imgUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task HandlePost()
+    {
+        var result = await Context.InsertPostAsync(_post);
+        if (result) {
+            NavigationManager.NavigateTo("/");
+        } else {
+            Toast.ShowError("Something bad happened.");
+        }
+    }
+}

@@ -1,24 +1,78 @@
 ﻿@page "/"
+@inject Data.OracleDbContext Context
+@inject NavigationManager Navigation
+@inject AuthService Auth
 
-<div class="container text-center">
-    <AuthorizeView>
-        <NotAuthorized>
-            <h1>Hello, stranger!</h1>
-        </NotAuthorized>
-        <Authorized>
-            <h1>Hello, buddy!</h1>
-        </Authorized>
-    </AuthorizeView>
+<AuthorizeView>
+    <NotAuthorized>
+        @if (true) {
+            Navigation.NavigateTo("/login");
+        }
+    </NotAuthorized>
+</AuthorizeView>
 
+<div class="container text-center m-3 align-self-center">
+    <h1>Hello, buddy!</h1>
     Welcome to the most liiiiiiiiiiit page you have ever seen!
 </div>
 
-@code { 
-    private IList<string> _posts;
+@if (_posts != null) {
+    <div class="content align-self-center">
+        @foreach (var post in _posts) {
+            <div class="card mb-3 align-self-center w-50">
+                <img class="card-img-top" src="@post.PictureSource" alt="Card image cap">
+                <div class="card-body">
+                    <h5 class="card-title">@post.Nickname</h5>
+                    <hr style="background-color: wheat;" />
+                    <p class="card-subtitle mb-2 text-muted">@post.CreationDate.ToString()</p>
+                    <p class="card-text">@post.Description</p>
+                    <div class="card-text">
+                        <span class="badge badge-primary">@post.Likes Likes</span>
+                        <i class="fas fa-thumbs-up fa-lg" @onclick="@(() => HandleLike(post.PostId))"></i>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+} else {
+    <div class="container text-center m-3 align-self-center">
+        <p>None of your followers have posts.</p>
+    </div>
+}
 
-    protected override Task OnInitializedAsync()
+@code {
+    private IList<Post> _posts;
+
+    protected override async Task OnInitializedAsync()
     {
+        //_posts = new List<Post>();
+        //_posts.Add(new Post {
+        //    Nickname = "Snitch",
+        //    PostId = 0,
+        //    CreationDate = DateTime.Now,
+        //    Description = "Best yolo desc u ever seen",
+        //    PictureSource = "/images/travelling-1.png",
+        //    Likes = 2
+        //}); ;
+        //_posts.Add(new Post {
+        //    Nickname = "Little Ponny",
+        //    PostId = 1,
+        //    CreationDate = DateTime.Now,
+        //    Description = "Best yolo desc u ever seen",
+        //    PictureSource = "/images/travelling-1.png",
+        //    Likes = 9
+        //}); ;
+
         //TODO get posts
-        return base.OnInitializedAsync();
+        var userInfo = await Auth.GetCurrentUser();
+        _posts = await Context.GetAllFollowersPostsAsync(userInfo.Id, (int)userInfo.Role);
+    }
+
+    private async Task HandleLike(int postId)
+    {
+    }
+
+    private void HandleClick()
+    {
     }
 }

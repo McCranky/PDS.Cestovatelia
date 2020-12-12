@@ -20,8 +20,9 @@ namespace PDS.Cestovatelia.Services
         public async Task<bool> RegisterUserAsync(UserRegisterRequest user)
         {
             var result = await _context.InsertUserAsync(user);
-            if (result) {
+            if (result >= 0) {
                 await _session.SetUserAsync(new UserInfo { 
+                    Id = result,
                     Name = user.Name,
                     Surname = user.Surname,
                     Nickname = user.Nickname,
@@ -29,7 +30,7 @@ namespace PDS.Cestovatelia.Services
                     Role = Role.User
                 });
             }
-            return result;
+            return result >= 0;
         }
 
         public async Task<bool> LoginUserAsync(UserLoginRequest user)

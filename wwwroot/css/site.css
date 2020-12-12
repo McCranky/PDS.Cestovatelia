@@ -2,6 +2,10 @@
 
 html, body {
     font-family: 'Nunito', sans-serif;
+    background-image: url("../images/travelling-1.png");
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: 100% 100%;
 }
 
 nav {
@@ -9,12 +13,34 @@ nav {
     /*background: linear-gradient(0deg, rgba(120,247,255,1) 0%, rgba(37,37,255,1) 100%);*/
 }
 
-.content{
+.badge{
+    cursor: default;
+}
+
+.fa-thumbs-up {
+    cursor: pointer;
+    transition: all 275ms ease;
+}
+
+.fa-thumbs-up:hover {
+    color: dodgerblue;
+}
+
+.content {
     display: flex;
     flex-direction: column;
     justify-content: space-around;
     align-content: center;
 }
+
+.profilePointer{
+    cursor: pointer;
+    transition: all 275ms ease;
+}
+
+    .profilePointer:hover {
+        color: wheat;
+    }
 
 /* Sticky footer styles
 -------------------------------------------------- */

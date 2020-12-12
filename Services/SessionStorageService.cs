@@ -17,16 +17,18 @@ namespace PDS.Cestovatelia.Services
 
         public async Task<UserInfo> GetUserAsync()
         {
+            var id = await _session.GetItemAsync<int>("id");
             var name = await _session.GetItemAsync<string>("name");
             var surname = await _session.GetItemAsync<string>("surname");
             var nickname = await _session.GetItemAsync<string>("nickname");
             var password = await _session.GetItemAsync<string>("password");
             var role = await _session.GetItemAsync<int>("role");
-            return new UserInfo { Name = name, Surname = surname, Nickname = nickname, Password = password, Role = (Role)role };
+            return new UserInfo { Id = id, Name = name, Surname = surname, Nickname = nickname, Password = password, Role = (Role)role };
         }
 
         public async Task SetUserAsync(UserInfo user)
         {
+            await _session.SetItemAsync<int>("id", user.Id);
             await _session.SetItemAsync<string>("name", user.Name);
             await _session.SetItemAsync<string>("surname", user.Surname);
             await _session.SetItemAsync<string>("nickname", user.Nickname);
@@ -36,6 +38,7 @@ namespace PDS.Cestovatelia.Services
 
         public async Task LogOutUserAsync()
         {
+            await _session.RemoveItemAsync("id");
             await _session.RemoveItemAsync("name");
             await _session.RemoveItemAsync("surname");
             await _session.RemoveItemAsync("nickname");

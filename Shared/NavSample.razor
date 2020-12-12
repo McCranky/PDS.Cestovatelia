@@ -9,11 +9,6 @@
         </button>
         <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
             <ul class="navbar-nav flex-grow-1">
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <i class="fas fa-home fa-sm"></i> Home
-                    </NavLink>
-                </li>
                 <AuthorizeView>
                     <NotAuthorized>
                         <li class="nav-item">
@@ -28,9 +23,23 @@
                         </li>
                     </NotAuthorized>
                     <Authorized>
+                        <form class="form-inline my-2 my-lg-0" @onsubmit="HandleSearch">
+                            <input class="form-control mr-sm-2" type="search" placeholder="nickname" aria-label="Search" @bind-value="@_nickname">
+                            <button class="btn btn-light my-2 my-sm-0" type="submit"><i class="fas fa-search"></i></button>
+                        </form>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                                <i class="fas fa-home fa-sm"></i> Home
+                            </NavLink>
+                        </li>
                         <li class="nav-item">
                             <NavLink class="nav-link" href="profil">
                                 <i class="fas fa-user-circle"></i> Profil
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="postform">
+                                <i class="fas fa-plus"></i> Create post
                             </NavLink>
                         </li>
                         <li class="nav-item">
@@ -47,10 +56,10 @@
 
 @code {
     private bool collapseNavMenu = true;
-
     private string baseMenuClass = "navbar-collapse d-sm-inline-flex flex-sm-row-reverse";
-
     private string NavMenuCssClass => baseMenuClass + (collapseNavMenu ? " collapse" : "");
+
+    private string _nickname = "";
 
     private void ToggleNavMenu()
     {
@@ -61,5 +70,12 @@
     {
         await Auth.LogoutCurrentUser();
         Navigation.NavigateTo("/", true);
+    }
+
+    private async Task HandleSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(_nickname)) {
+            Console.WriteLine(_nickname);
+        }
     }
 }
