@@ -1,0 +1,52 @@
+﻿@page "/register"
+@inject IToastService Toast
+@inject NavigationManager NavigationManager
+@inject AuthService Auth
+
+<div class="card border-light w-50 align-self-center mt-5">
+    @*<img class="card-img-top" src="/images/footprints.png">*@
+    <div class="card-body">
+        <h4 class="card-title">Register</h4>
+        <h6 class="card-subtitle text-muted mb-3">Please fill all fields.</h6>
+        <EditForm Model="@_user" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="form-group">
+                <label for="name">Name</label>
+                <InputText id="name" @bind-Value="_user.Name" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="surname">Surname</label>
+                <InputText id="surname" @bind-Value="_user.Surname" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="nickname">Nickname</label>
+                <InputText id="nickname" @bind-Value="_user.Nickname" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" @bind-Value="_user.Password" type="password" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm password </label>
+                <InputText id="confirmPassword" @bind-Value="_user.ConfirmPassword" type="password" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">Register</button>
+        </EditForm>
+    </div>
+</div>
+
+
+@code {
+    private Models.User.UserRegisterRequest _user = new Models.User.UserRegisterRequest();
+
+    private async Task HandleRegister()
+    {
+        if (await Auth.RegisterUserAsync(_user)) {
+            Toast.ShowSuccess("Successfully registerred.");
+            NavigationManager.NavigateTo("/", true);
+        } else {
+            Toast.ShowError("User already exists.");
+        }
+    }
+}

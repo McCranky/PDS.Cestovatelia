@@ -21,6 +21,17 @@ namespace PDS.Cestovatelia.Data
             return new OracleConnection(ConnectionString);
         }
 
+        public async Task<bool> InsertUserAsync(UserRegisterRequest user)
+        {
+            return false;
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                //var cmdTxt = "insert into s_user values()";
+                connection.Close();
+            }
+        }
+
         public async Task<UserInfo> GetUserInfoAsync(UserLoginRequest user)
         {
             var info = new UserInfo { Nickname = user.Nickname, Password = user.Password };

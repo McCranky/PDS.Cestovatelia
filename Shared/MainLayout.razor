@@ -1,14 +1,41 @@
 ﻿@inherits LayoutComponentBase
+<!--
 
-<BlazoredToasts />
-<div class="page">
-    <div class="sidebar">
+<BlazoredToasts IconType="IconType.FontAwesome"
+                SuccessIcon="fa fa-thumbs-up"
+                ErrorIcon="fa fa-bug"/>
+<div class="page">-->
+@*<div class="sidebar">
         <NavMenu />
-    </div>
+    </div>*@
+<!--<NavSample/>
 
     <div class="main">
         <div class="content px-4">
             @Body
         </div>
     </div>
+</div>-->
+@*<header>
+        <NavSample />
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @Body
+        </main>
+    </div>*@
+
+
+
+<header>
+    <NavSample />
+</header>
+
+<BlazoredToasts IconType="IconType.FontAwesome"
+                SuccessIcon="fa fa-thumbs-up"
+                ErrorIcon="fa fa-bug" />
+
+<div class="content">
+    @Body
 </div>

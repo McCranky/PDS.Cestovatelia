@@ -17,6 +17,21 @@ namespace PDS.Cestovatelia.Services
             _session = storage;
         }
 
+        public async Task<bool> RegisterUserAsync(UserRegisterRequest user)
+        {
+            var result = await _context.InsertUserAsync(user);
+            if (result) {
+                await _session.SetUserAsync(new UserInfo { 
+                    Name = user.Name,
+                    Surname = user.Surname,
+                    Nickname = user.Nickname,
+                    Password = user.Password,
+                    Role = Role.User
+                });
+            }
+            return result;
+        }
+
         public async Task<bool> LoginUserAsync(UserLoginRequest user)
         {
             var userInfo = await _context.GetUserInfoAsync(user);
@@ -26,6 +41,11 @@ namespace PDS.Cestovatelia.Services
 
             await _session.SetUserAsync(userInfo);
             return true;
+        }
+
+        public async Task LogoutCurrentUser()
+        {
+            await _session.LogOutUserAsync();
         }
 
         public async Task<UserInfo> GetCurrentUser()

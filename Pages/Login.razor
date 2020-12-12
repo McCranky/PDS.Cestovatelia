@@ -3,31 +3,27 @@
 @inject NavigationManager NavigationManager
 @inject AuthService Auth
 
-<h3 class="m-3">Login</h3>
-Please log in below or <NavLink href="register">register</NavLink> for a new account.
-
-<EditForm Model="@_user" OnValidSubmit="HandleLogin">
-    <DataAnnotationsValidator />
-    <div class="form-group">
-        <label for="nickname">Nickname</label>
-        <InputText id="nickname" @bind-Value="_user.Nickname" class="form-control" />
+<div class="card border-light w-50 align-self-center mt-5">
+    <img class="card-img-top" src="/images/footprints.png">
+    <div class="card-body">
+        <h4 class="card-title">Login</h4>
+        <h6 class="card-subtitle text-muted mb-3">Please log in below or <NavLink href="register">register</NavLink> for a new account.</h6>
+        <EditForm Model="@_user" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="form-group">
+                <label for="nickname">Nickname</label>
+                <InputText id="nickname" @bind-Value="_user.Nickname" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <InputText id="password" @bind-Value="_user.Password" type="password" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </EditForm>
     </div>
-    <div class="form-group">
-        <label for="password">Password</label>
-        <InputText id="password" @bind-Value="_user.Password" type="password" class="form-control" />
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-    <ValidationSummary />
-</EditForm>
+</div>
 
-<AuthorizeView>
-    <Authorized>
-        <p>Authorized</p>
-    </Authorized>
-    <NotAuthorized>
-        <p>Please log in</p>
-    </NotAuthorized>
-</AuthorizeView>
 
 @code {
     private Models.User.UserLoginRequest _user = new Models.User.UserLoginRequest();

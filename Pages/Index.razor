@@ -1,7 +1,24 @@
 ﻿@page "/"
 
-<h1>Hello, world!</h1>
+<div class="container text-center">
+    <AuthorizeView>
+        <NotAuthorized>
+            <h1>Hello, stranger!</h1>
+        </NotAuthorized>
+        <Authorized>
+            <h1>Hello, buddy!</h1>
+        </Authorized>
+    </AuthorizeView>
 
-Welcome to your new app.
+    Welcome to the most liiiiiiiiiiit page you have ever seen!
+</div>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+@code { 
+    private IList<string> _posts;
+
+    protected override Task OnInitializedAsync()
+    {
+        //TODO get posts
+        return base.OnInitializedAsync();
+    }
+}

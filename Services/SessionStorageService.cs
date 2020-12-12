@@ -34,7 +34,7 @@ namespace PDS.Cestovatelia.Services
             await _session.SetItemAsync<int>("role", (int)user.Role);
         }
 
-        public async Task LogOutUser()
+        public async Task LogOutUserAsync()
         {
             await _session.RemoveItemAsync("name");
             await _session.RemoveItemAsync("surname");

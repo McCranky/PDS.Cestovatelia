@@ -1,0 +1,65 @@
+﻿@inject AuthService Auth
+@inject NavigationManager Navigation
+
+<nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark border-bottom box-shadow mb-3">
+    <div class="container">
+        <a class="navbar-brand" href="">Travellers</a>
+        <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+            <ul class="navbar-nav flex-grow-1">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="fas fa-home fa-sm"></i> Home
+                    </NavLink>
+                </li>
+                <AuthorizeView>
+                    <NotAuthorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="login">
+                                <i class="fas fa-sign-in-alt fa-sm"></i> Log In
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="register">
+                                <i class="fas fa-clipboard-list fa-sm"></i> Register
+                            </NavLink>
+                        </li>
+                    </NotAuthorized>
+                    <Authorized>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="profil">
+                                <i class="fas fa-user-circle"></i> Profil
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link fa-sm" href="#" @onclick="HandleLogout">
+                                <i class="fas fa-door-open fa-sm"></i> Log Out
+                            </NavLink>
+                        </li>
+                    </Authorized>
+                </AuthorizeView>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string baseMenuClass = "navbar-collapse d-sm-inline-flex flex-sm-row-reverse";
+
+    private string NavMenuCssClass => baseMenuClass + (collapseNavMenu ? " collapse" : "");
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task HandleLogout()
+    {
+        await Auth.LogoutCurrentUser();
+        Navigation.NavigateTo("/", true);
+    }
+}
