@@ -1,57 +1,106 @@
 ﻿@page "/profil"
+@page "/profil/{SearchUserId:int}/{Following:bool}"
 @attribute [Authorize]
 
 @inject Data.OracleDbContext Context
 @inject Services.AuthService Auth
+@inject SessionStorageService Session
+@inject NavigationManager Navigation
 
 @if (_userStats != null) {
     <div class="card text-white bg-dark w-50 align-self-center m-3 text-center">
-        <div class="card-header">@_user.Name @_user.Surname</div>
+        @if (_user != null) {
+            <div class="card-header">@_user.Name @_user.Surname</div>
+        } else {
+            <div class="card-header">@_currentUser.Name @_currentUser.Surname</div>
+        }
         <div class="card-body">
-            <h5 class="card-title">@_user.Nickname</h5>
+            @if (_user != null) {
+                <h5 class="card-title">@_user.Nickname</h5>
+            } else { 
+                <h5 class="card-title">@_currentUser.Nickname</h5>
+            }
             <hr style="background-color: wheat;" />
-            <p class="card-text profilePointer">Total posts: @_userStats.PostsCount</p>
-            <p class="card-text profilePointer">Followed by: @_userStats.FollowersCount</p>
-            <p class="card-text profilePointer">Following: @_userStats.FollowingCount</p>
+            <p class="card-text">Total posts: @_userStats.PostsCount</p>
+            <p class="card-text profilePointer" @onclick="HandleFollowersOf">Followed by: @_userStats.FollowersCount</p>
+            <p class="card-text profilePointer" @onclick="HandleFollowersFor">Following: @_userStats.FollowingCount</p>
+            @if (_user != null) {
+                if (Following) {
+                    <span class="hover-blue" @onclick="HandleUnfollow">Stop following <i class="fas fa-dumpster ml-1"></i></span>
+                } else {
+                    <span class="hover-blue" @onclick="HandleFollow">Srat following<i class="fas fa-paper-plane ml-1"></i></span>
+                }
+            }
         </div>
     </div>
 } else {
     <p>Loading...</p>
 }
 
-@if (_myPosts != null) {
-    @foreach (var post in _myPosts) {
-        <div class="card mb-3 align-self-center w-50">
-            <img class="card-img-top" src="@post.PictureSource" alt="Card image cap">
-            <div class="card-body">
-                <h5 class="card-title">@post.Nickname</h5>
-                <hr style="background-color: wheat;" />
-                <p class="card-subtitle mb-2 text-muted">@post.CreationDate.ToString()</p>
-                <p class="card-text">@post.Description</p>
-                <div class="card-text">
-                    <span class="badge badge-primary">@post.Likes Likes</span>
-                    <i class="fas fa-thumbs-up fa-lg" @onclick="@(() => HandleLike(post.PostId))"></i>
-                </div>
-            </div>
-        </div>
+@if (_posts != null) {
+    @foreach (var post in _posts) {
+        <PostCard Post=post User=_currentUser ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))"/>
     }
 }
 
 @code {
-    private UserInfo _user;
-    private UserStats _userStats;
+    [Parameter]
+    public int SearchUserId { get; set; } = int.MinValue;
+    [Parameter]
+    public bool Following { get; set; }
 
-    private IList<Post> _myPosts;
+    private UserInfo _currentUser;
+    private SearchUserInfo _user;
+    private UserStats _userStats;
+    private IList<Post> _posts;
 
     protected override async Task OnInitializedAsync()
     {
-        _user = await Auth.GetCurrentUser();
-        _userStats = await Context.GetUserStats(_user.Id);
+        _currentUser = await Auth.GetCurrentUser();
 
-        _myPosts = await Context.GetAllUsersPostsAsync(_user.Id, (int)_user.Role, _user.Id);
+        if (SearchUserId != default) {
+            _user = await Session.GetSearchUser();
+            _posts = await Context.GetAllUsersPostsAsync(_currentUser.Id, (int)_currentUser.Role, _user.Id);
+            _userStats = await Context.GetUserStats(_user.Id);
+        } else {
+            _posts = await Context.GetAllUsersPostsAsync(_currentUser.Id, (int)_currentUser.Role, _currentUser.Id);
+            _userStats = await Context.GetUserStats(_currentUser.Id);
+        }
     }
 
-    private async Task HandleLike(int postId)
+    private async Task HandleDeletePost(Post post)
     {
+        if (await Context.DeletePostAsync(post.PostId)) {
+            _posts.Remove(post);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleFollow()
+    {
+        if (await Context.InsertFollowAsync(_currentUser.Id, SearchUserId)) {
+            Following = true;
+            ++_userStats.FollowersCount;
+        }
+    }
+
+    private async Task HandleUnfollow()
+    {
+        if (await Context.DeleteFollowAsync(_currentUser.Id, SearchUserId)) {
+            Following = false;
+            --_userStats.FollowersCount;
+        }
+    }
+
+    private void HandleFollowersOf()
+    {
+        if (_userStats.FollowersCount == 0) return;
+        Navigation.NavigateTo($"/followers/of/{(SearchUserId != default ? SearchUserId : _currentUser.Id)}/{_currentUser.Id}");
+    }
+
+    private void HandleFollowersFor()
+    {
+        if (_userStats.FollowingCount == 0) return;
+        Navigation.NavigateTo($"/followers/for/{(SearchUserId != default ? SearchUserId : _currentUser.Id)}/{_currentUser.Id}");
     }
 }

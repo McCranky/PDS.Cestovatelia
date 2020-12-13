@@ -1,5 +1,6 @@
 ﻿@page "/"
 @inject Data.OracleDbContext Context
+@inject SessionStorageService Session
 @inject NavigationManager Navigation
 @inject AuthService Auth
 
@@ -16,24 +17,10 @@
     Welcome to the most liiiiiiiiiiit page you have ever seen!
 </div>
 
-@if (_posts != null) {
-    <div class="content align-self-center">
-        @foreach (var post in _posts) {
-            <div class="card mb-3 align-self-center w-50">
-                <img class="card-img-top" src="@post.PictureSource" alt="Card image cap">
-                <div class="card-body">
-                    <h5 class="card-title">@post.Nickname</h5>
-                    <hr style="background-color: wheat;" />
-                    <p class="card-subtitle mb-2 text-muted">@post.CreationDate.ToString()</p>
-                    <p class="card-text">@post.Description</p>
-                    <div class="card-text">
-                        <span class="badge badge-primary">@post.Likes Likes</span>
-                        <i class="fas fa-thumbs-up fa-lg" @onclick="@(() => HandleLike(post.PostId))"></i>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
+@if (_posts != null && _posts.Count != 0) {
+    @foreach (var post in _posts) {
+        <PostCard Post=post User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))"/>
+    }
 } else {
     <div class="container text-center m-3 align-self-center">
         <p>None of your followers have posts.</p>
@@ -41,38 +28,22 @@
 }
 
 @code {
+    private UserInfo _user;
     private IList<Post> _posts;
 
     protected override async Task OnInitializedAsync()
     {
-        //_posts = new List<Post>();
-        //_posts.Add(new Post {
-        //    Nickname = "Snitch",
-        //    PostId = 0,
-        //    CreationDate = DateTime.Now,
-        //    Description = "Best yolo desc u ever seen",
-        //    PictureSource = "/images/travelling-1.png",
-        //    Likes = 2
-        //}); ;
-        //_posts.Add(new Post {
-        //    Nickname = "Little Ponny",
-        //    PostId = 1,
-        //    CreationDate = DateTime.Now,
-        //    Description = "Best yolo desc u ever seen",
-        //    PictureSource = "/images/travelling-1.png",
-        //    Likes = 9
-        //}); ;
+        _user = await Auth.GetCurrentUser();
 
-        //TODO get posts
         var userInfo = await Auth.GetCurrentUser();
         _posts = await Context.GetAllFollowersPostsAsync(userInfo.Id, (int)userInfo.Role);
     }
 
-    private async Task HandleLike(int postId)
+    private async Task HandleDeletePost(Post post)
     {
-    }
-
-    private void HandleClick()
-    {
+        if (await Context.DeletePostAsync(post.PostId)) {
+            _posts.Remove(post);
+            StateHasChanged();
+        }
     }
 }

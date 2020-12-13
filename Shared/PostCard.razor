@@ -1,0 +1,125 @@
+﻿@inject Data.OracleDbContext Context
+@inject SessionStorageService Session
+@inject NavigationManager Navigation
+
+<div class="card mb-3 align-self-center w-50">
+    <img class="card-img-top" src="@Post.PictureSource" alt="Card image cap">
+    <div class="card-body">
+        <h5 class="card-title font-weight-bolder font-italic">@Post.Nickname</h5>
+        <p class="card-subtitle mb-2 text-muted font-italic">@Post.CreationDate.ToString()</p>
+        <p class="card-text">@Post.Description</p>
+        <div class="card-text">
+            @if (ShowComments) {
+                <i class="fas fa-chevron-up fa-lg clickable mr-1" @onclick="HandleShowChange"></i>
+            } else {
+                <i class="fas fa-chevron-down fa-lg clickable  mr-1" @onclick="HandleShowChange"></i>
+            }
+            @if (Post.EditableByMe) {
+                <span class="badge badge-danger mr-1 clickable" @onclick="HandleDeletePost">Delete</span>
+            }
+            <span class="badge badge-primary mr-1">@Post.Likes Likes</span>
+            @if (Post.LikedByMe) {
+                <i class="fas fa-thumbs-up liked fa-lg clickable" @onclick="@(() => HandleDislike(Post.PostId))"></i>
+            } else {
+                <i class="fas fa-thumbs-up fa-lg clickable" @onclick="@(() => HandleLike(Post.PostId))"></i>
+            }
+
+        </div>
+        @if (ShowComments) {
+            if (_comments.Count > 0) {
+                <ul class="list-group list-group-flush mt-3">
+                    @foreach (var comment in _comments) {
+                        <li class="list-group-item">
+                            <h6 class="font-weight-bold">@comment.Nickname</h6>
+                            <h6 class="text-muted font-italic">@comment.CreationDate.ToString()</h6>
+                            <p>@comment.Text</p>
+                            @if (comment.EditableByMe) {
+                                <span class="badge badge-danger mr-1 clickable" @onclick="@(() => HandleDeleteComment(comment))">Remove</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            } else {
+                <hr style="background-color: wheat;" />
+            }
+            <EditForm Model="@_commentModel" OnValidSubmit="HandleCommentPost">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group mt-3">
+                    <label for="comment">Comment</label>
+                    <InputTextArea id="comment" @bind-Value="_commentModel.Text" class="form-control" />
+                </div>
+
+                <button type="submit" class="btn btn-info">Submit</button>
+            </EditForm>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool ShowComments { get; set; }
+    [Parameter]
+    public Post Post { get; set; }
+    [Parameter]
+    public UserInfo User { get; set; }
+    [Parameter]
+    public Action HandleDeletePost { get; set; }
+
+    private IList<Comment> _comments = new List<Comment>();
+    private CommentModel _commentModel = new CommentModel();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _commentModel.UserId = User.Id;
+        _commentModel.PostId = Post.PostId;
+
+        if (ShowComments) {
+            _comments = await Context.GetAllCommentsAsync(Post.PostId, User.Id, (int)User.Role);
+        }
+    }
+
+    private async Task HandleShowChange()
+    {
+        ShowComments = !ShowComments;
+        if (ShowComments) {
+            if (_comments.Count == 0) {
+                _comments = await Context.GetAllCommentsAsync(Post.PostId, User.Id, (int)User.Role);
+            }
+        }
+    }
+
+    private async Task HandleCommentPost()
+    {
+        var comment = await Context.InsertCommentAsync(_commentModel);
+        if (comment != null) {
+            comment.Nickname = User.Nickname;
+            _comments.Add(comment);
+            _commentModel.Text = "";
+        }
+    }
+
+    private async Task HandleLike(int postId)
+    {
+        if (await Context.InsertLikeAsync(User.Id, postId)) {
+            Post.LikedByMe = true;
+            ++Post.Likes;
+        }
+    }
+
+    private async Task HandleDislike(int postId)
+    {
+        if (await Context.DeleteLikeAsync(User.Id, postId)) {
+            Post.LikedByMe = false;
+            --Post.Likes;
+        }
+    }
+
+    private async Task HandleDeleteComment(Comment comment)
+    {
+        if (await Context.DeleteCommentAsync(comment.CommentId)) {
+            _comments.Remove(comment);
+        }
+    }
+}

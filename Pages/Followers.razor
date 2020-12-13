@@ -1,0 +1,56 @@
+﻿@page "/followers/{Type}/{UserId:int}/{CurrentUserId:int}"
+@attribute [Authorize]
+
+@inject Data.OracleDbContext Context
+@inject SessionStorageService Session
+@inject NavigationManager Navigation
+
+@if (_users != null) {
+    if (_users.Count == 0) {
+        <p class="align-self-center m-3">User with this nick doesn't extst.</p>
+    } else {
+        <ul class="list-group w-25 align-self-center m-3 text-center">
+            @foreach (var user in _users) {
+                <li class="list-group-item clickable user-select" @onclick="@(() => HandleUserSelect(user))">
+                    <h5>@user.Nickname</h5>
+                    <h6 class="text-muted">@user.Name @user.Surname</h6>
+                    @if (user.Id == CurrentUserId) {
+                        <h6 class="text-info">This is you</h6>
+                    } else if (user.Following) {
+                        <h6 class="text-warning">Subscribing</h6>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    [Parameter]
+    public string Type { get; set; }
+    [Parameter]
+    public int UserId { get; set; }
+    [Parameter]
+    public int CurrentUserId { get; set; }
+
+    private IList<SearchUserInfo> _users;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Type == "of") {
+            _users = await Context.GetFollowersOfAsync(CurrentUserId, UserId);
+        } else {
+            _users = await Context.GetFollowersForAsync(CurrentUserId, UserId);
+        }
+    }
+
+    private async Task HandleUserSelect(SearchUserInfo searchUser)
+    {
+        if (searchUser.Id == CurrentUserId) {
+            Navigation.NavigateTo("/profil");
+        } else {
+            await Session.SetSearchUser(searchUser);
+            Navigation.NavigateTo($"/profil/{searchUser.Id}/{searchUser.Following}");
+        }
+    }
+}

@@ -24,7 +24,282 @@ namespace PDS.Cestovatelia.Data
             return new OracleConnection(ConnectionString);
         }
 
-        public async Task<bool> InsertPostAsync(PostModel post) //string description, byte[] picture, int userId, string nickname
+        public async Task<bool> InsertFollowAsync(int currentUserId, int userId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = "follow_user";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_followed_user_id", OracleDbType.Int32, 32, userId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_follower_user_id", OracleDbType.Int32, 32, currentUserId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_date", OracleDbType.Date, 69, DateTime.Now, ParameterDirection.Input);
+                cmd.Parameters.Add("p_output", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<bool> DeleteFollowAsync(int currentUserId, int userId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = "unfollow_user";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_followed_user_id", OracleDbType.Int32, 32, userId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_follower_user_id", OracleDbType.Int32, 32, currentUserId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_output", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<List<SearchUserInfo>> GetUsersLikeAsync(int currentUserId, string quarryNickname)
+        {
+            var users = new List<SearchUserInfo>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @$"select user_id, name, surname, nickname, (select count(1) from s_user_follower suf
+                                where suf.user_id = su.user_id and suf.follower_id = :currentUserId) as followed_by_me
+                                from s_user su where nickname like '%{quarryNickname}%'";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    users.Add(new SearchUserInfo { 
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Surname = reader.GetString(2),
+                        Nickname = reader.GetString(3),
+                        Following = reader.GetInt32(4) > 0
+                    });
+                }
+
+                connection.Close();
+                return users;
+            }
+        }
+        
+        public async Task<List<SearchUserInfo>> GetFollowersForAsync(int currentUserId, int userId)
+        {
+            var users = new List<SearchUserInfo>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select su.user_id, name, surname, nickname, (select count(1) from s_user_follower suf1
+                                where suf1.user_id = su.user_id and suf1.follower_id = :currentUserId) as followed_by_me
+                                from s_user su
+                                join s_user_follower suf on (suf.user_id = su.user_id)
+                                where follower_id = :userId";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("userId", userId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    users.Add(new SearchUserInfo { 
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Surname = reader.GetString(2),
+                        Nickname = reader.GetString(3),
+                        Following = reader.GetInt32(4) > 0
+                    });
+                }
+
+                connection.Close();
+                return users;
+            }
+        }
+        
+        public async Task<List<SearchUserInfo>> GetFollowersOfAsync(int currentUserId, int userId)
+        {
+            var users = new List<SearchUserInfo>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select su.user_id, name, surname, nickname, (select count(1) from s_user_follower suf1
+                                where suf1.user_id = su.user_id and suf1.follower_id = :currentUserId) as followed_by_me
+                                from s_user su
+                                join s_user_follower suf on (su.user_id = suf.follower_id)
+                                where suf.user_id = :userId";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("userId", userId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    users.Add(new SearchUserInfo { 
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Surname = reader.GetString(2),
+                        Nickname = reader.GetString(3),
+                        Following = reader.GetInt32(4) > 0
+                    });
+                }
+
+                connection.Close();
+                return users;
+            }
+        }
+
+        public async Task<bool> DeleteCommentAsync(int commentId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = "delete_comment";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_comment_id", OracleDbType.Int32, 32, commentId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_output", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<bool> DeletePostAsync(int postId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = "delete_post";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_post_id", OracleDbType.Int32, 32, postId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_output", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<List<Comment>> GetAllCommentsAsync(int postId, int userId, int roleId)
+        {
+            var comments = new List<Comment>();
+
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select comment_id, user_id, nickname, text, created_at, able_to_edit from
+                                (select comment_id, user_id, nickname, text, created_at,
+                                (case when :roleId > 1 or user_id = :userId then 1 else 0 end) as able_to_edit
+                                from s_comment
+                                join s_user using(user_id)
+                                where post_id = :postId)";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("roleId", roleId);
+                cmd.Parameters.Add("userId", userId);
+                cmd.Parameters.Add("postId", postId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    comments.Add(new Comment { 
+                        CommentId = reader.GetInt32(0),
+                        UserId = reader.GetInt32(1),
+                        Nickname = reader.GetString(2),
+                        Text = reader.GetString(3),
+                        CreationDate = reader.GetDateTime(4),
+                        EditableByMe = reader.GetInt32(5) > 0
+                    });
+                }
+
+                connection.Close();
+                return comments;
+            }
+        }
+
+        public async Task<Comment> InsertCommentAsync(CommentModel comment)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var date = DateTime.Now;
+                var cmdTxt = "add_comment";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_user_id", OracleDbType.Int32, 32, comment.UserId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_post_id", OracleDbType.Int32, 32, comment.PostId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_date", OracleDbType.Date, 69, date, ParameterDirection.Input);
+                cmd.Parameters.Add("p_text", OracleDbType.Varchar2, 200, comment.Text, ParameterDirection.Input);
+                cmd.Parameters.Add("p_output", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return new Comment {
+                    CommentId = int.Parse(cmd.Parameters["p_output"].Value.ToString()),
+                    Text = comment.Text,
+                    CreationDate = date,
+                    EditableByMe = true,
+                    UserId = comment.UserId
+                };
+            }
+        }
+
+        public async Task<bool> InsertLikeAsync(int userId, int postId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var date = DateTime.Now;
+                var cmdTxt = "like_post";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_user_id", OracleDbType.Int32, 32, userId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_post_id", OracleDbType.Int32, 32, postId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_result", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<bool> DeleteLikeAsync(int userId, int postId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var date = DateTime.Now;
+                var cmdTxt = "dislike_post";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.Add("p_user_id", OracleDbType.Int32, 32, userId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_post_id", OracleDbType.Int32, 32, postId, ParameterDirection.Input);
+                cmd.Parameters.Add("p_result", OracleDbType.Int32).Direction = ParameterDirection.Output;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+
+                return true;
+            }
+        }
+
+        public async Task<bool> InsertPostAsync(PostModel post)
         {
             using (var connection = GetConnection()) {
                 connection.Open();
@@ -45,17 +320,6 @@ namespace PDS.Cestovatelia.Data
                 connection.Close();
 
                 return true;
-                //return new Post { 
-                //    CreationDate = date,
-                //    Description = description,
-                //    EditableByMe = true,
-                //    LikedByMe = false,
-                //    Likes = 0,
-                //    Nickname = nickname,
-                //    PictureSource = $"data:{"image/png"};base64,{Convert.ToBase64String(picture)}",
-                //    PostId = id,
-                //    UserId = userId
-                //};
             }
         }
 
@@ -71,8 +335,7 @@ namespace PDS.Cestovatelia.Data
                                 (case when :roleId > 1 or user_id = :currentUserId then 1 else 0 end) as able_to_edit,
                                 row_number() over(order by created_at) as rn
                                 from s_user
-                                join s_user_post using(user_id)
-                                join s_post using(post_id)
+                                join s_post using(user_id)
                                 where user_id=:userId)
                                 where rn between ((:actualPage-1) * 12 + 1) and ( :actualPage * 12)";
                 var cmd = new OracleCommand(cmdTxt, connection);
@@ -89,7 +352,7 @@ namespace PDS.Cestovatelia.Data
                         UserId = reader.GetInt32(0),
                         Nickname = reader.GetString(1),
                         PostId = reader.GetInt32(2),
-                        Description = reader.GetString(3),
+                        Description = reader.IsDBNull(3) ? "" : reader.GetString(3),
                         PictureSource = $"data:{"image/png"};base64,{Convert.ToBase64String((byte[])reader.GetValue(4))}",
                         CreationDate = reader.GetDateTime(5),
                         Likes = reader.GetInt32(6),
@@ -121,8 +384,7 @@ namespace PDS.Cestovatelia.Data
                                 union
                                 select user_id, nickname, role_id from s_user
                                 where user_id = :currentUserId) interesting_posts
-                                join s_user_post using(user_id)
-                                join s_post post using(post_id))
+                                join s_post post using(user_id))
                                 where rn between ((:actualPage - 1) * 12 + 1) and (:actualPage*12)";
                 var cmd = new OracleCommand(cmdTxt, connection);
                 cmd.Parameters.Add("currentUserId", currentUserId);
@@ -139,7 +401,7 @@ namespace PDS.Cestovatelia.Data
                         UserId = reader.GetInt32(0),
                         Nickname = reader.GetString(1),
                         PostId = reader.GetInt32(2),
-                        Description = reader.GetString(3),
+                        Description = reader.IsDBNull(3) ? "" : reader.GetString(3),
                         PictureSource = $"data:{"image/png"};base64,{Convert.ToBase64String((byte[])reader.GetValue(4))}",
                         CreationDate = reader.GetDateTime(5),
                         Likes = reader.GetInt32(6),
@@ -168,14 +430,11 @@ namespace PDS.Cestovatelia.Data
                 await cmd.ExecuteNonQueryAsync();
 
                 var xmlDoc = ((OracleXmlType)cmd.Parameters["p_xml_output"].Value).GetXmlDocument();
-                //var test = xmlDoc.SelectSingleNode("//posts").InnerText;
-                //var posts = xmlDoc.FirstChild.ChildNodes[0].InnerText;
-                //var followers = xmlDoc.FirstChild.ChildNodes[1].InnerText;
-                //var following = xmlDoc.FirstChild.ChildNodes[2].InnerText;
+
                 var userStats = new UserStats {
                     PostsCount = int.Parse(xmlDoc.FirstChild.ChildNodes[0].InnerText),
-                    FollowersCount = int.Parse(xmlDoc.FirstChild.ChildNodes[1].InnerText),
-                    FollowingCount = int.Parse(xmlDoc.FirstChild.ChildNodes[2].InnerText)
+                    FollowingCount = int.Parse(xmlDoc.FirstChild.ChildNodes[1].InnerText),
+                    FollowersCount = int.Parse(xmlDoc.FirstChild.ChildNodes[2].InnerText)
                 };
                 connection.Close();
                 return userStats;

@@ -23,13 +23,18 @@
                         </li>
                     </NotAuthorized>
                     <Authorized>
-                        <form class="form-inline my-2 my-lg-0" @onsubmit="HandleSearch">
+                        @*<form class="form-inline my-2 my-lg-0" @onsubmit="HandleSearch">
                             <input class="form-control mr-sm-2" type="search" placeholder="nickname" aria-label="Search" @bind-value="@_nickname">
                             <button class="btn btn-light my-2 my-sm-0" type="submit"><i class="fas fa-search"></i></button>
-                        </form>
+                        </form>*@
                         <li class="nav-item">
                             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                                 <i class="fas fa-home fa-sm"></i> Home
+                            </NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="find" Match="NavLinkMatch.All">
+                                <i class="fas fa-search"></i> Find User
                             </NavLink>
                         </li>
                         <li class="nav-item">
@@ -72,10 +77,10 @@
         Navigation.NavigateTo("/", true);
     }
 
-    private async Task HandleSearch()
-    {
-        if (!string.IsNullOrWhiteSpace(_nickname)) {
-            Console.WriteLine(_nickname);
-        }
-    }
+    //private async Task HandleSearch()
+    //{
+    //    if (!string.IsNullOrWhiteSpace(_nickname)) {
+    //        Console.WriteLine(_nickname);
+    //    }
+    //}
 }

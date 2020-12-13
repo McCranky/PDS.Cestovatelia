@@ -1,4 +1,5 @@
 ﻿using PDS.Cestovatelia.Data;
+using PDS.Cestovatelia.Models;
 using PDS.Cestovatelia.Models.User;
 using System;
 using System.Collections.Generic;
@@ -46,7 +47,7 @@ namespace PDS.Cestovatelia.Services
 
         public async Task LogoutCurrentUser()
         {
-            await _session.LogOutUserAsync();
+            await _session.RemoveUserAsync();
         }
 
         public async Task<UserInfo> GetCurrentUser()

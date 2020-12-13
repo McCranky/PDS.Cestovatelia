@@ -1,0 +1,61 @@
+﻿@page "/find"
+@attribute [Authorize]
+
+@inject AuthService Auth
+@inject Data.OracleDbContext Context
+@inject SessionStorageService Session
+@inject NavigationManager Navigation
+
+<form class="form-inline m-3 my-lg-0 align-self-center" @onsubmit="HandleSearch">
+    <input class="form-control mr-sm-2" type="search" placeholder="nickname" aria-label="Search" @bind-value="@_nickname">
+    <button class="btn btn-light my-2 my-sm-0" type="submit"><i class="fas fa-search"></i></button>
+</form>
+
+@if (_users != null) {
+    if (_users.Count == 0) {
+        <p class="align-self-center m-3">User with this nick doesn't extst.</p>
+    } else {
+        <ul class="list-group w-25 align-self-center m-3 text-center">
+            @foreach (var user in _users)
+	        {
+                <li class="list-group-item clickable user-select" @onclick="@(() => HandleUserSelect(user))">
+                    <h5>@user.Nickname</h5>
+                    <h6 class="text-muted">@user.Name @user.Surname</h6>
+                    @if (user.Nickname == _user.Nickname) {
+                        <h6 class="text-info">This is you</h6>
+                    } else if (user.Following) {
+                        <h6 class="text-warning">Subscribing</h6>
+                    }
+                </li>
+	        }
+        </ul>
+    }
+}
+
+@code {
+    private string _nickname = "";
+    private IList<SearchUserInfo> _users;
+    private UserInfo _user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Auth.GetCurrentUser();
+    }
+
+    private async Task HandleSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(_nickname)) {
+            _users = await Context.GetUsersLikeAsync(_user.Id, _nickname);
+        }
+    }
+
+    private async Task HandleUserSelect(SearchUserInfo searchUser)
+    {
+        if (searchUser.Nickname == _user.Nickname) {
+            Navigation.NavigateTo("/profil");
+        } else {
+            await Session.SetSearchUser(searchUser);
+            Navigation.NavigateTo($"/profil/{searchUser.Id}/{searchUser.Following}");
+        }
+    }
+}
