@@ -1,5 +1,7 @@
 ﻿@inject AuthService Auth
 @inject NavigationManager Navigation
+@inject IToastService Toast
+@inject Data.OracleDbContext Context
 
 <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark border-bottom box-shadow mb-3">
     <div class="container">
@@ -23,10 +25,6 @@
                         </li>
                     </NotAuthorized>
                     <Authorized>
-                        @*<form class="form-inline my-2 my-lg-0" @onsubmit="HandleSearch">
-                            <input class="form-control mr-sm-2" type="search" placeholder="nickname" aria-label="Search" @bind-value="@_nickname">
-                            <button class="btn btn-light my-2 my-sm-0" type="submit"><i class="fas fa-search"></i></button>
-                        </form>*@
                         <li class="nav-item">
                             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                                 <i class="fas fa-home fa-sm"></i> Home
@@ -48,6 +46,18 @@
                             </NavLink>
                         </li>
                         <li class="nav-item">
+                            <NavLink class="nav-link" href="stats">
+                                <i class="fas fa-chart-line"></i> Stats
+                            </NavLink>
+                        </li>
+                        @if (_user != null && _user.Role == Role.MainAdmin) {
+                            <li class="nav-item">
+                                <span class="nav-link clickable" @onclick="HandleGenerateReport">
+                                    <i class="fas fa-chart-bar"></i> Generate report
+                                </span>
+                            </li>
+                        }
+                        <li class="nav-item">
                             <NavLink class="nav-link fa-sm" href="#" @onclick="HandleLogout">
                                 <i class="fas fa-door-open fa-sm"></i> Log Out
                             </NavLink>
@@ -64,7 +74,13 @@
     private string baseMenuClass = "navbar-collapse d-sm-inline-flex flex-sm-row-reverse";
     private string NavMenuCssClass => baseMenuClass + (collapseNavMenu ? " collapse" : "");
 
+    private UserInfo _user;
     private string _nickname = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Auth.GetCurrentUser();
+    }
 
     private void ToggleNavMenu()
     {
@@ -77,10 +93,10 @@
         Navigation.NavigateTo("/", true);
     }
 
-    //private async Task HandleSearch()
-    //{
-    //    if (!string.IsNullOrWhiteSpace(_nickname)) {
-    //        Console.WriteLine(_nickname);
-    //    }
-    //}
+    private async Task HandleGenerateReport()
+    {
+        if (await Context.GenerateReportAsync()) {
+            Toast.ShowSuccess("Report successfully generated.");
+        }
+    }
 }

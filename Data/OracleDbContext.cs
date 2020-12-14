@@ -24,6 +24,335 @@ namespace PDS.Cestovatelia.Data
             return new OracleConnection(ConnectionString);
         }
 
+        public async Task<bool> GenerateReportAsync()
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = "create_report";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                await cmd.ExecuteNonQueryAsync();
+                connection.Close();
+                return true;
+            }
+        }
+
+        public async Task<string> GetReportAsync()
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select report from os_social_stats@db_link_os
+                                 order by creation_date desc
+                                 fetch first 1 row only";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                var reader = await cmd.ExecuteReaderAsync();
+
+                //XmlDocument xmlDoc = new XmlDocument();
+                var xmlString = "";
+                if (reader.Read()) {
+                    //xmlDoc.LoadXml(reader.GetString(0));
+                    xmlString = reader.GetString(0);
+                }
+
+                connection.Close();
+                return xmlString;
+            }
+        }
+
+        public async Task<Post> GetMostLikedPostAsync(int currentUserId, int roleId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select * from (select p.post_id, row_number() over(order by (select count(1) 
+                                from table(like_list)) desc) as rn 
+                                from s_post p) where rn = 1";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+
+                connection.Close();
+                return await GetPostAsync(currentUserId, roleId, result);
+            }
+        }
+
+        public async Task<Post> GetMostCommentedPostAsync(int currentUserId, int roleId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select * from (select p.post_id, 
+                                row_number() over(order by count(*) desc)  as rn 
+                                from s_post p 
+                                join s_comment c on c.post_id = p.post_id  
+                                group by p.post_id) where rn = 1";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+
+                connection.Close();
+                return await GetPostAsync(currentUserId, roleId, result);
+            }
+        }
+
+        public async Task<List<Post>> GetThreeMostLikedPostsAsync(int currentUserId, int roleId)
+        {
+            var postsIds = new List<int>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @$"select post_id
+                                from (select post_id, 
+                                        row_number() over(order by (select count(1) from table(like_list)) desc) as rn
+                                        from s_user
+                                            join s_post using(user_id)
+                                                where user_id = :currentUserId)
+                                                    where rn < 4";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    postsIds.Add(reader.GetInt32(0));
+                }
+                connection.Close();
+            }
+            var posts = new List<Post>();
+            foreach (var postId in postsIds) {
+                var post = await GetPostAsync(currentUserId, roleId, postId);
+                posts.Add(post);
+            }
+            return posts;
+        }
+
+        public async Task<List<Post>> GetThreeMostCommentedPostsAsync(int currentUserId, int roleId)
+        {
+            var postsIds = new List<int>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @$"select post_id from (select p.post_id, row_number() over(order by count(*) desc) as rn from s_post p
+                                    join s_comment c on c.post_id = p.post_id
+                                    where p.user_id = :currentUserId
+                                    group by p.post_id)
+                                    where rn < 4";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    postsIds.Add(reader.GetInt32(0));
+                }
+                connection.Close();
+            }
+            var posts = new List<Post>();
+            foreach (var postId in postsIds) {
+                var post = await GetPostAsync(currentUserId, roleId, postId);
+                posts.Add(post);
+            }
+            return posts;
+        }
+
+        public async Task<List<Post>> GetThreeMostLikedPostsOfMyFollowersAsync(int currentUserId, int roleId)
+        {
+            var postsIds = new List<int>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @$"select post_id from (select p.post_id, row_number() over(order by (select count(1) from table(like_list)) desc) as rn 
+                                from s_user_follower uf 
+                                join s_user u on u.user_id = uf.follower_id 
+                                join s_post p on p.user_id = u.user_id 
+                                where uf.user_id = :currentUserId)  
+                                where rn < 4";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    postsIds.Add(reader.GetInt32(0));
+                }
+                connection.Close();
+            }
+            var posts = new List<Post>();
+            foreach (var postId in postsIds) {
+                var post = await GetPostAsync(currentUserId, roleId, postId);
+                posts.Add(post);
+            }
+            return posts;
+        }
+
+        public async Task<List<Post>> GetThreeMostCommentedPostsOfMyFollowersAsync(int currentUserId, int roleId)
+        {
+            var postsIds = new List<int>();
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @$"select post_id from (select p.post_id, row_number() over(order by count(*) desc) as rn 
+                                from s_user_follower uf join s_user u on u.user_id = uf.follower_id 
+                                join s_post p on p.user_id = u.user_id join s_comment c on c.post_id = p.post_id 
+                                where uf.user_id = :currentUserId group by p.post_id)  
+                                where rn < 4";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var reader = await cmd.ExecuteReaderAsync();
+                while (reader.Read()) {
+                    postsIds.Add(reader.GetInt32(0));
+                }
+                connection.Close();
+            }
+            var posts = new List<Post>();
+            foreach (var postId in postsIds) {
+                var post = await GetPostAsync(currentUserId, roleId, postId);
+                posts.Add(post);
+            }
+            return posts;
+        }
+
+        public async Task<int> GetCountOfMonthlyPostsAsync(int currentUserId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var quarry = @"select count(*) from s_post p
+                                where extract(year from created_at) = extract(year from sysdate)
+                                and extract(month from created_at) = extract(month from sysdate) 
+                                and user_id = :currentUserId";
+                var cmd = new OracleCommand(quarry, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+                connection.Close();
+                return result;
+            }
+        }
+
+        public async Task<int> GetCountOfWeeklyPostsAsync(int currentUserId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var quarry = @"select count(*) from s_post p
+                                where extract(year from created_at) = extract(year from sysdate)
+                                and extract(month from created_at) = extract(month from sysdate)
+                                and to_char(created_at, 'W') = to_char(sysdate, 'W')
+                                and user_id = :currentUserId";
+                var cmd = new OracleCommand(quarry, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+                connection.Close();
+                return result;
+            }
+        }
+
+        public async Task<int> GetCountOfMonthlyLikesGivenAsync(int currentUserId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var quarry = @"select count(*) from s_post 
+                                where extract(year from created_at) = extract(year from sysdate)
+                                and extract(month from created_at) = extract(month from sysdate)
+                                and exists (
+                                    select * from table(like_list)
+                                    where column_value = :currentUserId)";
+                var cmd = new OracleCommand(quarry, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+                connection.Close();
+                return result;
+            }
+        }
+
+        public async Task<int> GetCountOfMonthlyCommentsGivenAsync(int currentUserId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var quarry = @"select count(*) from s_comment 
+                                where extract(year from created_at) = extract(year from sysdate)
+                                and extract(month from created_at) = extract(month from sysdate)
+                                and user_id = :currentUserId";
+                var cmd = new OracleCommand(quarry, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+                connection.Close();
+                return result;
+            }
+        }
+
+        public async Task<int> GetCountOfWeeklyCommentsGivenAsync(int currentUserId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var quarry = @"select count(*) from s_comment 
+                                where extract(year from created_at) = extract(year from sysdate)
+                                and extract(month from created_at) = extract(month from sysdate)
+                                and to_char(created_at, 'W') = to_char(sysdate, 'W')
+                                and user_id = :currentUserId";
+                var cmd = new OracleCommand(quarry, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+
+                var result = (int)(decimal)await cmd.ExecuteScalarAsync();
+                connection.Close();
+                return result;
+            }
+        }
+
+        public async Task<Post> GetPostAsync(int currentUserId, int roleId, int postId)
+        {
+            using (var connection = GetConnection()) {
+                connection.Open();
+
+                var cmdTxt = @"select user_id, nickname, post_id, description, picture, created_at, (select count(1) from table(like_list)) as like_count,
+                                (select count(1) from table(like_list) where column_value = :currentUserId) as liked_by_user,
+                                (case when :roleId > 1 or user_id = :currentUserId then 1 else 0 end) as able_to_edit
+                                from
+                                (select user_id, nickname, role_id, post_id, description, picture, created_at, like_list,
+                                row_number() over(order by created_at desc) as rn from
+                                ( select user_id, nickname, role_id from s_user su
+                                join s_user_follower suf using(user_id)
+                                where follower_id = :currentUserId
+                                union
+                                select user_id, nickname, role_id from s_user
+                                where user_id = :currentUserId) interesting_posts
+                                join s_post post using(user_id))
+                                where post_id = :postId";
+                var cmd = new OracleCommand(cmdTxt, connection);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("roleId", roleId);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("currentUserId", currentUserId);
+                cmd.Parameters.Add("postId", postId);
+                var reader = await cmd.ExecuteReaderAsync();
+
+
+                Post post = null;
+                if (reader.Read()) {
+                    post = new Post {
+                        UserId = reader.GetInt32(0),
+                        Nickname = reader.GetString(1),
+                        PostId = reader.GetInt32(2),
+                        Description = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                        PictureSource = $"data:{"image/png"};base64,{Convert.ToBase64String((byte[])reader.GetValue(4))}",
+                        CreationDate = reader.GetDateTime(5),
+                        Likes = reader.GetInt32(6),
+                        LikedByMe = reader.GetInt32(7) > 0,
+                        EditableByMe = reader.GetInt32(8) > 0
+                    };
+                }
+                connection.Close();
+                return post;
+            }
+        }
+
         public async Task<bool> InsertFollowAsync(int currentUserId, int userId)
         {
             using (var connection = GetConnection()) {

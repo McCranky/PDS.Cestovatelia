@@ -1,0 +1,122 @@
+﻿@page "/stats"
+@attribute [Authorize]
+
+@inject AuthService Auth
+@inject Data.OracleDbContext Context
+
+<div class="card text-white bg-info mb-3 w-25 align-self-center">
+    <div class="card-body">
+        <h5 class="card-title">Personal stats</h5>
+        <hr />
+        <p class="card-text">Weekly posts: @_weeklyPosts</p>
+        <p class="card-text">Weekly comments: @_weeklyComments</p>
+        <p class="card-text">Monthly posts: @_monthlyPosts</p>
+        <p class="card-text">Monthly comments: @_monthlyComments</p>
+        <p class="card-text">Monthly likes: @_monthlyLikes</p>
+    </div>
+</div>
+
+@if (_threeMostLikedPosts != null && _threeMostLikedPosts.Count > 0) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Your 3 Most Liked Posts</h4>
+    <div class="card-deck align-self-center ml-5 mr-5">
+        @foreach (var post in _threeMostLikedPosts) {
+            <PostCard Post=post User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))" />
+        }
+    </div>
+} else if (_threeMostLikedPosts != null) {
+    <h3 class="align-self-center m-3 font-weight-bolder">You dont have any posts to analyse</h3>
+}
+
+@if (_threeMostCommentedPosts != null && _threeMostCommentedPosts.Count > 0) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Your 3 Most Commented Posts</h4>
+    <div class="card-deck align-self-center ml-5 mr-5">
+        @foreach (var post in _threeMostCommentedPosts) {
+            <PostCard Post=post User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))" />
+        }
+    </div>
+}
+
+@if (_threeMostLikedFollowersPosts != null && _threeMostLikedFollowersPosts.Count > 0) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Followers 3 Most Liked Posts</h4>
+    <div class="card-deck align-self-center ml-5 mr-5">
+        @foreach (var post in _threeMostLikedFollowersPosts) {
+            <PostCard Post=post User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))" />
+        }
+    </div>
+} else if (_threeMostLikedFollowersPosts != null) {
+    <h3 class="align-self-center m-3 font-weight-bolder">You followers don't have any posts to analyse</h3>
+}
+
+@if (_threeMostCommentedFollowersPosts != null && _threeMostCommentedFollowersPosts.Count > 0) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Followers 3 Most Commented Posts</h4>
+    <div class="card-deck align-self-center ml-5 mr-5">
+        @foreach (var post in _threeMostCommentedFollowersPosts) {
+            <PostCard Post=post User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(post))" />
+        }
+    </div>
+}
+
+@if (_mostLikedPost != null) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Most Liked Post</h4>
+    <PostCard Post=_mostLikedPost User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(_mostLikedPost))" />
+}
+
+@if (_mostCommentedPost != null) {
+    <h4 class="align-self-center m-3 font-weight-bolder">Most Commented Post</h4>
+    <PostCard Post=_mostCommentedPost User=_user ShowComments=false HandleDeletePost="@(async () => await HandleDeletePost(_mostCommentedPost))" />
+}
+
+<a class="btn btn-warning mt-3 align-self-center" href="@_reportSource" download="report">Download last admin report</a>
+
+@code {
+    private UserInfo _user;
+    private string _reportSource;
+
+    private IList<Post> _threeMostLikedPosts;
+    private IList<Post> _threeMostCommentedPosts;
+
+    private IList<Post> _threeMostLikedFollowersPosts;
+    private IList<Post> _threeMostCommentedFollowersPosts;
+
+    private Post _mostCommentedPost;
+    private Post _mostLikedPost;
+
+    private int _monthlyComments;
+    private int _monthlyLikes;
+    private int _monthlyPosts;
+
+    private int _weeklyPosts;
+    private int _weeklyComments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await Auth.GetCurrentUser();
+
+        _threeMostLikedPosts     = await Context.GetThreeMostLikedPostsAsync(_user.Id, (int)_user.Role);
+        _threeMostCommentedPosts = await Context.GetThreeMostCommentedPostsAsync(_user.Id, (int)_user.Role);
+
+        _threeMostLikedFollowersPosts     = await Context.GetThreeMostLikedPostsOfMyFollowersAsync(_user.Id, (int)_user.Role);
+        _threeMostCommentedFollowersPosts = await Context.GetThreeMostCommentedPostsOfMyFollowersAsync(_user.Id, (int)_user.Role);
+
+        _mostCommentedPost = await Context.GetMostCommentedPostAsync(_user.Id, (int)_user.Role);
+        _mostLikedPost     = await Context.GetMostLikedPostAsync(_user.Id, (int)_user.Role);
+
+        _monthlyComments = await Context.GetCountOfMonthlyCommentsGivenAsync(_user.Id);
+        _monthlyLikes    = await Context.GetCountOfMonthlyLikesGivenAsync(_user.Id);
+        _monthlyPosts    = await Context.GetCountOfMonthlyPostsAsync(_user.Id);
+
+        _weeklyComments = await Context.GetCountOfWeeklyCommentsGivenAsync(_user.Id);
+        _weeklyPosts    = await Context.GetCountOfWeeklyPostsAsync(_user.Id);
+
+        var xmlString = await Context.GetReportAsync();
+        _reportSource = $"data:text/plain;charset=UTF-8;page=21,{xmlString}";
+    }
+
+    private async Task HandleDeletePost(Post post)
+    {
+        if (await Context.DeletePostAsync(post.PostId)) {
+            StateHasChanged();
+            // TODO refresh page
+        }
+    }
+}
